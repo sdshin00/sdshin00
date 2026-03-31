@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>떠리몰 - 체화재고 경매 플랫폼</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1 class="logo">떠리몰</h1>
+      <p class="tagline">체화재고 경매 플랫폼</p>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-view="dashboard">대시보드</button>
+      <button class="nav-btn" data-view="register">재고 등록</button>
+      <button class="nav-btn" data-view="auctions">경매장</button>
+      <button class="nav-btn" data-view="transactions">거래 내역</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 대시보드 -->
+    <section id="dashboard" class="view active">
+      <h2>대시보드</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">등록 재고</span>
+          <span class="stat-value" id="stat-inventory">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">진행중 경매</span>
+          <span class="stat-value" id="stat-active">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">완료 거래</span>
+          <span class="stat-value" id="stat-completed">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">총 거래액</span>
+          <span class="stat-value" id="stat-total">0원</span>
+        </div>
+      </div>
+      <h3>최근 경매</h3>
+      <div id="recent-auctions" class="card-list"></div>
+    </section>
+
+    <!-- 재고 등록 -->
+    <section id="register" class="view">
+      <h2>체화재고 등록</h2>
+      <form id="register-form" class="form-card">
+        <div class="form-group">
+          <label for="supplier-name">거래처명</label>
+          <input type="text" id="supplier-name" required placeholder="거래처명을 입력하세요">
+        </div>
+        <div class="form-group">
+          <label for="product-name">상품명</label>
+          <input type="text" id="product-name" required placeholder="상품명을 입력하세요">
+        </div>
+        <div class="form-group">
+          <label for="category">카테고리</label>
+          <select id="category" required>
+            <option value="">선택하세요</option>
+            <option value="식품">식품</option>
+            <option value="의류">의류</option>
+            <option value="가전">가전</option>
+            <option value="생활용품">생활용품</option>
+            <option value="화장품">화장품</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="quantity">수량</label>
+            <input type="number" id="quantity" required min="1" placeholder="수량">
+          </div>
+          <div class="form-group">
+            <label for="original-price">정상가 (원)</label>
+            <input type="number" id="original-price" required min="0" placeholder="정상 판매가">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="min-price">최소 희망가 (원)</label>
+            <input type="number" id="min-price" required min="0" placeholder="최소 낙찰 희망가">
+          </div>
+          <div class="form-group">
+            <label for="auction-duration">경매 기간</label>
+            <select id="auction-duration" required>
+              <option value="1">1시간</option>
+              <option value="6">6시간</option>
+              <option value="24" selected>24시간</option>
+              <option value="72">3일</option>
+              <option value="168">7일</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="description">상품 설명</label>
+          <textarea id="description" rows="3" placeholder="재고 상태, 유통기한 등 상세 정보를 입력하세요"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="reason">체화 사유</label>
+          <select id="reason">
+            <option value="">선택하세요</option>
+            <option value="유통기한임박">유통기한 임박</option>
+            <option value="시즌종료">시즌 종료</option>
+            <option value="과잉생산">과잉 생산</option>
+            <option value="반품">반품</option>
+            <option value="리뉴얼">리뉴얼 (구버전)</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">경매 등록</button>
+      </form>
+    </section>
+
+    <!-- 경매장 -->
+    <section id="auctions" class="view">
+      <h2>경매장</h2>
+      <div class="filter-bar">
+        <select id="filter-category">
+          <option value="all">전체 카테고리</option>
+          <option value="식품">식품</option>
+          <option value="의류">의류</option>
+          <option value="가전">가전</option>
+          <option value="생활용품">생활용품</option>
+          <option value="화장품">화장품</option>
+          <option value="기타">기타</option>
+        </select>
+        <select id="filter-status">
+          <option value="active">진행중</option>
+          <option value="ended">종료</option>
+          <option value="all">전체</option>
+        </select>
+      </div>
+      <div id="auction-list" class="card-list"></div>
+    </section>
+
+    <!-- 거래 내역 -->
+    <section id="transactions" class="view">
+      <h2>거래 내역</h2>
+      <div id="transaction-list" class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>거래일시</th>
+              <th>상품명</th>
+              <th>거래처</th>
+              <th>수량</th>
+              <th>낙찰가</th>
+              <th>할인율</th>
+            </tr>
+          </thead>
+          <tbody id="transaction-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- 입찰 모달 -->
+  <div id="bid-modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      <h3>입찰하기</h3>
+      <div id="bid-item-info"></div>
+      <div class="form-group">
+        <label for="bid-amount">입찰가 (원)</label>
+        <input type="number" id="bid-amount" min="0" placeholder="입찰 금액을 입력하세요">
+      </div>
+      <div class="form-group">
+        <label for="bidder-name">입찰자명</label>
+        <input type="text" id="bidder-name" placeholder="입찰자명을 입력하세요">
+      </div>
+      <button id="submit-bid" class="btn btn-primary">입찰</button>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
