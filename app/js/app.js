@@ -1,9 +1,11 @@
-// 떠리몰 체화재고 경매 플랫폼
+// ========================================
+// 떠리몰 - 체화재고 경매 플랫폼
+// ========================================
 
 (function () {
   'use strict';
 
-  // --- 데이터 저장소 (localStorage) ---
+  // --- 데이터 저장소 ---
   const STORAGE_KEY = 'tteori_data';
 
   function loadData() {
@@ -12,8 +14,8 @@
     return { auctions: [], transactions: [] };
   }
 
-  function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  function saveData(d) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
   }
 
   let data = loadData();
@@ -27,25 +29,31 @@
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
-  function timeRemaining(endTime) {
-    const diff = new Date(endTime) - new Date();
-    if (diff <= 0) return '종료됨';
-    const hours = Math.floor(diff / 3600000);
-    const minutes = Math.floor((diff % 3600000) / 60000);
-    if (hours >= 24) {
-      const days = Math.floor(hours / 24);
-      return days + '일 ' + (hours % 24) + '시간 남음';
-    }
-    return hours + '시간 ' + minutes + '분 남음';
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
-  function isAuctionActive(auction) {
+  function timeRemaining(endTime) {
+    const diff = new Date(endTime) - new Date();
+    if (diff <= 0) return null;
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    if (days > 0) return days + '일 ' + hours + '시간';
+    if (hours > 0) return hours + '시간 ' + minutes + '분';
+    return minutes + '분';
+  }
+
+  function isActive(auction) {
     return new Date(auction.endTime) > new Date();
   }
 
   function getHighestBid(auction) {
     if (!auction.bids || auction.bids.length === 0) return null;
-    return auction.bids.reduce((max, bid) => bid.amount > max.amount ? bid : max, auction.bids[0]);
+    return auction.bids.reduce((max, b) => b.amount > max.amount ? b : max, auction.bids[0]);
   }
 
   function discountRate(original, final) {
@@ -53,13 +61,23 @@
     return Math.round((1 - final / original) * 100) + '%';
   }
 
+  // --- 토스트 알림 ---
+  function showToast(message, isError) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (isError ? ' error' : '');
+    toast.innerHTML =
+      '<span class="material-icons-round">' + (isError ? 'error_outline' : 'check_circle') + '</span>' +
+      '<span>' + escapeHtml(message) + '</span>';
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
   // --- 경매 종료 처리 ---
   function processEndedAuctions() {
     let changed = false;
     data.auctions.forEach(auction => {
-      if (auction.settled) return;
-      if (isAuctionActive(auction)) return;
-
+      if (auction.settled || isActive(auction)) return;
       auction.settled = true;
       changed = true;
 
@@ -84,124 +102,172 @@
   }
 
   // --- 네비게이션 ---
-  const navButtons = document.querySelectorAll('.nav-btn');
+  const navItems = document.querySelectorAll('.nav-item:not(.nav-item-danger)');
   const views = document.querySelectorAll('.view');
 
-  navButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const viewId = btn.dataset.view;
-      navButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      views.forEach(v => v.classList.remove('active'));
-      document.getElementById(viewId).classList.add('active');
-      refreshView(viewId);
-    });
+  function switchView(viewId) {
+    navItems.forEach(n => n.classList.remove('active'));
+    document.querySelector('[data-view="' + viewId + '"]').classList.add('active');
+    views.forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    refreshView(viewId);
+    closeMobileMenu();
+  }
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => switchView(item.dataset.view));
+  });
+
+  // 전체보기 링크
+  document.querySelectorAll('[data-goto]').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.goto));
   });
 
   function refreshView(viewId) {
     processEndedAuctions();
-    switch (viewId) {
-      case 'dashboard': renderDashboard(); break;
-      case 'auctions': renderAuctions(); break;
-      case 'transactions': renderTransactions(); break;
-    }
+    if (viewId === 'dashboard') renderDashboard();
+    else if (viewId === 'auctions') renderAuctions();
+    else if (viewId === 'transactions') renderTransactions();
+  }
+
+  // --- 모바일 메뉴 ---
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const menuToggle = document.getElementById('menu-toggle');
+
+  menuToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('hidden');
+  });
+
+  overlay.addEventListener('click', closeMobileMenu);
+
+  function closeMobileMenu() {
+    sidebar.classList.remove('open');
+    overlay.classList.add('hidden');
   }
 
   // --- 대시보드 ---
   function renderDashboard() {
-    const activeCount = data.auctions.filter(a => isAuctionActive(a)).length;
-    const completedCount = data.transactions.length;
+    const activeCount = data.auctions.filter(a => isActive(a)).length;
     const totalAmount = data.transactions.reduce((sum, t) => sum + t.winPrice * t.quantity, 0);
 
     document.getElementById('stat-inventory').textContent = data.auctions.length;
     document.getElementById('stat-active').textContent = activeCount;
-    document.getElementById('stat-completed').textContent = completedCount;
+    document.getElementById('stat-completed').textContent = data.transactions.length;
     document.getElementById('stat-total').textContent = formatPrice(totalAmount);
 
-    const recentContainer = document.getElementById('recent-auctions');
-    const recent = [...data.auctions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
+    const container = document.getElementById('recent-auctions');
+    const recent = [...data.auctions]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 6);
 
     if (recent.length === 0) {
-      recentContainer.innerHTML = '<div class="empty-state"><p>등록된 경매가 없습니다</p><p style="font-size:0.9rem">재고 등록 탭에서 첫 경매를 시작해보세요</p></div>';
+      container.innerHTML =
+        '<div class="empty-state">' +
+        '<span class="material-icons-round">inventory</span>' +
+        '<p>등록된 경매가 없습니다</p>' +
+        '<p class="sub">재고 등록 탭에서 첫 경매를 시작해보세요</p>' +
+        '</div>';
       return;
     }
-    recentContainer.innerHTML = recent.map(a => renderAuctionCard(a)).join('');
+    container.innerHTML = recent.map(renderAuctionCard).join('');
     attachBidButtons();
   }
 
-  // --- 경매 카드 렌더링 ---
+  // --- 경매 카드 ---
   function renderAuctionCard(auction) {
-    const active = isAuctionActive(auction);
+    const active = isActive(auction);
     const highest = getHighestBid(auction);
-    const highestAmount = highest ? formatPrice(highest.amount) : '-';
     const bidCount = auction.bids ? auction.bids.length : 0;
+    const remaining = timeRemaining(auction.endTime);
 
-    let statusBadge;
+    let cardClass = 'auction-card';
+    let badge = '';
     if (active) {
-      statusBadge = '<span class="card-badge badge-active">진행중</span>';
+      badge = '<span class="badge badge-active">진행중</span>';
     } else if (auction.winner) {
-      statusBadge = '<span class="card-badge badge-won">낙찰</span>';
+      cardClass += ' won';
+      badge = '<span class="badge badge-won">낙찰</span>';
     } else {
-      statusBadge = '<span class="card-badge badge-ended">유찰</span>';
+      cardClass += ' ended';
+      badge = '<span class="badge badge-ended">유찰</span>';
     }
 
-    let bidHistory = '';
+    let bidHistoryHtml = '';
     if (auction.bids && auction.bids.length > 0) {
       const recentBids = [...auction.bids].sort((a, b) => b.amount - a.amount).slice(0, 3);
-      bidHistory = '<div class="bid-history"><div class="bid-history-title">입찰 현황</div>' +
-        recentBids.map((b, i) => '<div class="bid-entry' + (i === 0 ? ' winning' : '') + '">' +
-          b.bidder + ' - ' + formatPrice(b.amount) + '</div>').join('') +
-        '</div>';
+      bidHistoryHtml =
+        '<div class="bid-history"><div class="bid-history-title">입찰 현황</div>' +
+        recentBids.map((b, i) =>
+          '<div class="bid-entry' + (i === 0 ? ' winning' : '') + '">' +
+          '<span>' + escapeHtml(b.bidder) + '</span>' +
+          '<span>' + formatPrice(b.amount) + '</span></div>'
+        ).join('') + '</div>';
     }
 
-    return '<div class="auction-card' + (active ? '' : ' ended') + '">' +
-      '<div class="card-header"><span class="card-title">' + escapeHtml(auction.productName) + '</span>' + statusBadge + '</div>' +
-      '<div class="card-meta"><span>' + escapeHtml(auction.supplierName) + '</span><span>' + escapeHtml(auction.category) + '</span><span>수량: ' + auction.quantity + '</span></div>' +
-      (auction.reason ? '<span class="card-reason">' + escapeHtml(auction.reason) + '</span>' : '') +
-      (auction.description ? '<div class="card-desc">' + escapeHtml(auction.description) + '</div>' : '') +
-      '<div class="card-prices">' +
-        '<div class="price-item"><span class="price-label">정상가</span><span class="price-value original">' + formatPrice(auction.originalPrice) + '</span></div>' +
-        '<div class="price-item"><span class="price-label">최소 희망가</span><span class="price-value">' + formatPrice(auction.minPrice) + '</span></div>' +
-        '<div class="price-item"><span class="price-label">현재 최고 입찰가</span><span class="price-value current">' + highestAmount + '</span></div>' +
-      '</div>' +
-      '<div class="card-bids">입찰 ' + bidCount + '건</div>' +
-      (active ? '<div class="card-timer">' + timeRemaining(auction.endTime) + '</div>' : '') +
-      bidHistory +
-      (active ? '<div class="card-actions"><button class="btn btn-primary btn-sm bid-btn" data-id="' + auction.id + '">입찰하기</button></div>' : '') +
-      (auction.winner ? '<div class="card-meta" style="margin-top:0.5rem;color:var(--success);font-weight:600">낙찰자: ' + escapeHtml(auction.winner) + ' / ' + formatPrice(auction.winPrice) + ' (' + discountRate(auction.originalPrice, auction.winPrice) + ' 할인)</div>' : '') +
-    '</div>';
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return '<div class="' + cardClass + '">' +
+      '<div class="card-top-bar"></div>' +
+      '<div class="card-body">' +
+        '<div class="card-header">' +
+          '<span class="card-title">' + escapeHtml(auction.productName) + '</span>' +
+          badge +
+        '</div>' +
+        '<div class="card-meta">' +
+          '<span class="meta-item"><span class="material-icons-round">business</span>' + escapeHtml(auction.supplierName) + '</span>' +
+          '<span class="meta-divider"></span>' +
+          '<span class="meta-item"><span class="material-icons-round">category</span>' + escapeHtml(auction.category) + '</span>' +
+          '<span class="meta-divider"></span>' +
+          '<span class="meta-item"><span class="material-icons-round">inventory_2</span>' + auction.quantity + '개</span>' +
+        '</div>' +
+        (auction.reason ? '<span class="card-reason"><span class="material-icons-round" style="font-size:12px">label</span>' + escapeHtml(auction.reason) + '</span>' : '') +
+        (auction.description ? '<div class="card-desc">' + escapeHtml(auction.description) + '</div>' : '') +
+        '<div class="price-grid">' +
+          '<div class="price-item"><span class="price-label">정상가</span><span class="price-value original">' + formatPrice(auction.originalPrice) + '</span></div>' +
+          '<div class="price-item"><span class="price-label">최소 희망가</span><span class="price-value">' + formatPrice(auction.minPrice) + '</span></div>' +
+          '<div class="price-item"><span class="price-label">현재 최고가</span><span class="price-value current">' + (highest ? formatPrice(highest.amount) : '-') + '</span></div>' +
+        '</div>' +
+        bidHistoryHtml +
+        '<div class="card-footer">' +
+          '<div class="bid-count"><span class="material-icons-round">people</span>입찰 ' + bidCount + '건</div>' +
+          (active && remaining
+            ? '<div class="timer"><span class="material-icons-round">timer</span>' + remaining + ' 남음</div>'
+            : '') +
+          (auction.winner
+            ? '<div class="winner-info"><span class="material-icons-round">emoji_events</span>' + escapeHtml(auction.winner) + ' / ' + formatPrice(auction.winPrice) + '</div>'
+            : '') +
+          (active
+            ? '<button class="btn btn-primary btn-sm bid-btn" data-id="' + auction.id + '"><span class="material-icons-round" style="font-size:16px">gavel</span>입찰</button>'
+            : '') +
+        '</div>' +
+      '</div></div>';
   }
 
   // --- 경매장 ---
   function renderAuctions() {
-    const categoryFilter = document.getElementById('filter-category').value;
-    const statusFilter = document.getElementById('filter-status').value;
+    const cat = document.getElementById('filter-category').value;
+    const status = document.getElementById('filter-status').value;
 
     let filtered = [...data.auctions];
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(a => a.category === categoryFilter);
-    }
-    if (statusFilter === 'active') {
-      filtered = filtered.filter(a => isAuctionActive(a));
-    } else if (statusFilter === 'ended') {
-      filtered = filtered.filter(a => !isAuctionActive(a));
-    }
+    if (cat !== 'all') filtered = filtered.filter(a => a.category === cat);
+    if (status === 'active') filtered = filtered.filter(a => isActive(a));
+    else if (status === 'ended') filtered = filtered.filter(a => !isActive(a));
 
     filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+    document.getElementById('filter-result').textContent = filtered.length + '건';
+
     const container = document.getElementById('auction-list');
     if (filtered.length === 0) {
-      container.innerHTML = '<div class="empty-state"><p>해당하는 경매가 없습니다</p></div>';
+      container.innerHTML =
+        '<div class="empty-state">' +
+        '<span class="material-icons-round">search_off</span>' +
+        '<p>해당하는 경매가 없습니다</p>' +
+        '<p class="sub">필터를 변경하거나 새 경매를 등록해보세요</p>' +
+        '</div>';
       return;
     }
-    container.innerHTML = filtered.map(a => renderAuctionCard(a)).join('');
+    container.innerHTML = filtered.map(renderAuctionCard).join('');
     attachBidButtons();
   }
 
@@ -212,30 +278,57 @@
   function renderTransactions() {
     const tbody = document.getElementById('transaction-tbody');
     if (data.transactions.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light);padding:2rem">거래 내역이 없습니다</td></tr>';
+      tbody.innerHTML =
+        '<tr><td colspan="8" style="text-align:center;padding:3rem">' +
+        '<div class="empty-state" style="padding:1rem">' +
+        '<span class="material-icons-round">receipt_long</span>' +
+        '<p>거래 내역이 없습니다</p>' +
+        '<p class="sub">경매가 낙찰되면 여기에 표시됩니다</p>' +
+        '</div></td></tr>';
       return;
     }
+
     const sorted = [...data.transactions].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
     tbody.innerHTML = sorted.map(t => {
-      const date = new Date(t.completedAt);
-      const dateStr = date.getFullYear() + '.' +
-        String(date.getMonth() + 1).padStart(2, '0') + '.' +
-        String(date.getDate()).padStart(2, '0') + ' ' +
-        String(date.getHours()).padStart(2, '0') + ':' +
-        String(date.getMinutes()).padStart(2, '0');
-      const rate = discountRate(t.originalPrice, t.winPrice);
+      const d = new Date(t.completedAt);
+      const dateStr = d.getFullYear() + '.' +
+        String(d.getMonth() + 1).padStart(2, '0') + '.' +
+        String(d.getDate()).padStart(2, '0') + ' ' +
+        String(d.getHours()).padStart(2, '0') + ':' +
+        String(d.getMinutes()).padStart(2, '0');
       return '<tr>' +
         '<td>' + dateStr + '</td>' +
-        '<td>' + escapeHtml(t.productName) + '</td>' +
+        '<td><strong>' + escapeHtml(t.productName) + '</strong></td>' +
         '<td>' + escapeHtml(t.supplierName) + '</td>' +
-        '<td>' + t.quantity + '</td>' +
-        '<td>' + formatPrice(t.winPrice) + '</td>' +
-        '<td class="discount-rate">' + rate + '</td>' +
+        '<td class="text-right">' + t.quantity.toLocaleString() + '</td>' +
+        '<td class="text-right" style="color:var(--text-tertiary);text-decoration:line-through">' + formatPrice(t.originalPrice) + '</td>' +
+        '<td class="text-right"><strong>' + formatPrice(t.winPrice) + '</strong></td>' +
+        '<td class="text-right discount-rate">' + discountRate(t.originalPrice, t.winPrice) + '</td>' +
+        '<td>' + escapeHtml(t.winner) + '</td>' +
       '</tr>';
     }).join('');
   }
 
   // --- 재고 등록 ---
+  const originalPriceInput = document.getElementById('original-price');
+  const minPriceInput = document.getElementById('min-price');
+  const pricePreview = document.getElementById('price-preview');
+  const previewRate = document.getElementById('preview-rate');
+
+  function updatePricePreview() {
+    const orig = parseInt(originalPriceInput.value);
+    const min = parseInt(minPriceInput.value);
+    if (orig > 0 && min > 0 && min < orig) {
+      pricePreview.classList.remove('hidden');
+      previewRate.textContent = discountRate(orig, min);
+    } else {
+      pricePreview.classList.add('hidden');
+    }
+  }
+
+  originalPriceInput.addEventListener('input', updatePricePreview);
+  minPriceInput.addEventListener('input', updatePricePreview);
+
   document.getElementById('register-form').addEventListener('submit', function (e) {
     e.preventDefault();
 
@@ -264,10 +357,9 @@
     saveData(data);
 
     this.reset();
-    alert('경매가 등록되었습니다!');
-
-    // 경매장으로 이동
-    document.querySelector('[data-view="auctions"]').click();
+    pricePreview.classList.add('hidden');
+    showToast('경매가 성공적으로 등록되었습니다');
+    switchView('auctions');
   });
 
   // --- 입찰 ---
@@ -277,57 +369,59 @@
   function attachBidButtons() {
     document.querySelectorAll('.bid-btn').forEach(btn => {
       btn.addEventListener('click', function () {
-        const auctionId = this.dataset.id;
-        const auction = data.auctions.find(a => a.id === auctionId);
-        if (!auction || !isAuctionActive(auction)) return;
+        const auction = data.auctions.find(a => a.id === this.dataset.id);
+        if (!auction || !isActive(auction)) return;
 
-        currentBidAuctionId = auctionId;
+        currentBidAuctionId = auction.id;
         const highest = getHighestBid(auction);
         const minBid = highest ? highest.amount + 1 : auction.minPrice;
 
         document.getElementById('bid-item-info').innerHTML =
           '<strong>' + escapeHtml(auction.productName) + '</strong><br>' +
           '거래처: ' + escapeHtml(auction.supplierName) + '<br>' +
-          '수량: ' + auction.quantity + '개<br>' +
+          '수량: ' + auction.quantity.toLocaleString() + '개<br>' +
           '최소 희망가: ' + formatPrice(auction.minPrice) + '<br>' +
           '현재 최고 입찰가: ' + (highest ? formatPrice(highest.amount) : '없음') + '<br>' +
-          '<strong>최소 입찰가: ' + formatPrice(minBid) + '</strong>';
+          '<span class="highlight">최소 입찰가: ' + formatPrice(minBid) + '</span>';
 
-        document.getElementById('bid-amount').value = '';
-        document.getElementById('bid-amount').min = minBid;
-        document.getElementById('bid-amount').placeholder = formatPrice(minBid) + ' 이상';
+        const bidInput = document.getElementById('bid-amount');
+        bidInput.value = '';
+        bidInput.min = minBid;
+        bidInput.placeholder = formatPrice(minBid) + ' 이상';
         document.getElementById('bidder-name').value = '';
         bidModal.classList.remove('hidden');
       });
     });
   }
 
-  document.querySelector('.modal-close').addEventListener('click', () => {
+  function closeModal() {
     bidModal.classList.add('hidden');
-  });
+  }
 
+  document.querySelector('.modal-close').addEventListener('click', closeModal);
+  document.getElementById('cancel-bid').addEventListener('click', closeModal);
   bidModal.addEventListener('click', function (e) {
-    if (e.target === bidModal) bidModal.classList.add('hidden');
+    if (e.target === bidModal) closeModal();
   });
 
   document.getElementById('submit-bid').addEventListener('click', function () {
     const amount = parseInt(document.getElementById('bid-amount').value);
     const bidder = document.getElementById('bidder-name').value.trim();
 
-    if (!bidder) { alert('입찰자명을 입력해주세요.'); return; }
-    if (!amount || isNaN(amount)) { alert('입찰 금액을 입력해주세요.'); return; }
+    if (!bidder) { showToast('입찰자명을 입력해주세요', true); return; }
+    if (!amount || isNaN(amount)) { showToast('입찰 금액을 입력해주세요', true); return; }
 
     const auction = data.auctions.find(a => a.id === currentBidAuctionId);
-    if (!auction || !isAuctionActive(auction)) {
-      alert('이 경매는 이미 종료되었습니다.');
-      bidModal.classList.add('hidden');
+    if (!auction || !isActive(auction)) {
+      showToast('이 경매는 이미 종료되었습니다', true);
+      closeModal();
       return;
     }
 
     const highest = getHighestBid(auction);
     const minBid = highest ? highest.amount + 1 : auction.minPrice;
     if (amount < minBid) {
-      alert('최소 입찰가(' + formatPrice(minBid) + ') 이상이어야 합니다.');
+      showToast('최소 입찰가(' + formatPrice(minBid) + ') 이상이어야 합니다', true);
       return;
     }
 
@@ -338,23 +432,32 @@
     });
 
     saveData(data);
-    bidModal.classList.add('hidden');
-    alert(formatPrice(amount) + '에 입찰되었습니다!');
+    closeModal();
+    showToast(formatPrice(amount) + '에 입찰 완료!');
 
-    // 현재 뷰 새로고침
-    const activeView = document.querySelector('.nav-btn.active').dataset.view;
+    const activeView = document.querySelector('.nav-item.active').dataset.view;
     refreshView(activeView);
   });
 
-  // --- 타이머 업데이트 ---
+  // --- 데이터 초기화 ---
+  document.getElementById('reset-data').addEventListener('click', function () {
+    if (!confirm('모든 데이터를 초기화하시겠습니까?\n(샘플 데이터가 다시 로드됩니다)')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    data = { auctions: [], transactions: [] };
+    loadSampleData();
+    showToast('데이터가 초기화되었습니다');
+    refreshView('dashboard');
+  });
+
+  // --- 타이머 자동 갱신 ---
   setInterval(function () {
-    const activeView = document.querySelector('.nav-btn.active').dataset.view;
+    const activeView = document.querySelector('.nav-item.active').dataset.view;
     if (activeView === 'dashboard' || activeView === 'auctions') {
       refreshView(activeView);
     }
   }, 30000);
 
-  // --- 샘플 데이터 (최초 실행 시) ---
+  // --- 샘플 데이터 ---
   function loadSampleData() {
     if (data.auctions.length > 0) return;
 
@@ -373,8 +476,8 @@
         endTime: new Date(now + 24 * 3600000).toISOString(),
         createdAt: new Date(now - 2 * 3600000).toISOString(),
         bids: [
-          { bidder: '마트왕', amount: 9000, bidAt: new Date(now - 1 * 3600000).toISOString() },
-          { bidder: '할인매장', amount: 10500, bidAt: new Date(now - 0.5 * 3600000).toISOString() }
+          { bidder: '마트왕', amount: 9000, bidAt: new Date(now - 3600000).toISOString() },
+          { bidder: '할인매장', amount: 10500, bidAt: new Date(now - 1800000).toISOString() }
         ],
         settled: false, winner: null, winPrice: null
       },
@@ -391,7 +494,7 @@
         endTime: new Date(now + 48 * 3600000).toISOString(),
         createdAt: new Date(now - 5 * 3600000).toISOString(),
         bids: [
-          { bidder: '아울렛마트', amount: 18000, bidAt: new Date(now - 3 * 3600000).toISOString() }
+          { bidder: '아울렛마트', amount: 18000, bidAt: new Date(now - 10800000).toISOString() }
         ],
         settled: false, winner: null, winPrice: null
       },
@@ -406,7 +509,7 @@
         description: '리뉴얼로 인한 구버전 재고 소진. 제조일 2025.06. 품질 이상 없음.',
         reason: '리뉴얼',
         endTime: new Date(now + 6 * 3600000).toISOString(),
-        createdAt: new Date(now - 1 * 3600000).toISOString(),
+        createdAt: new Date(now - 3600000).toISOString(),
         bids: [],
         settled: false, winner: null, winPrice: null
       },
@@ -421,11 +524,29 @@
         description: '신모델 출시로 구모델 재고 처분. 정상 작동. 박스 포장 완료.',
         reason: '리뉴얼',
         endTime: new Date(now + 72 * 3600000).toISOString(),
-        createdAt: new Date(now - 10 * 3600000).toISOString(),
+        createdAt: new Date(now - 36000000).toISOString(),
         bids: [
-          { bidder: '다이소팜', amount: 11000, bidAt: new Date(now - 8 * 3600000).toISOString() },
-          { bidder: '생활할인', amount: 12500, bidAt: new Date(now - 6 * 3600000).toISOString() },
-          { bidder: '다이소팜', amount: 13000, bidAt: new Date(now - 4 * 3600000).toISOString() }
+          { bidder: '다이소팜', amount: 11000, bidAt: new Date(now - 28800000).toISOString() },
+          { bidder: '생활할인', amount: 12500, bidAt: new Date(now - 21600000).toISOString() },
+          { bidder: '다이소팜', amount: 13000, bidAt: new Date(now - 14400000).toISOString() }
+        ],
+        settled: false, winner: null, winPrice: null
+      },
+      {
+        id: generateId(),
+        supplierName: '홈리빙',
+        productName: '대나무 수납 바구니 세트 (3종)',
+        category: '생활용품',
+        quantity: 2000,
+        originalPrice: 22000,
+        minPrice: 6000,
+        description: '과잉 생산분. 대/중/소 3종 세트. 미개봉 신품.',
+        reason: '과잉생산',
+        endTime: new Date(now + 36 * 3600000).toISOString(),
+        createdAt: new Date(now - 7200000).toISOString(),
+        bids: [
+          { bidder: '할인매장', amount: 7000, bidAt: new Date(now - 5400000).toISOString() },
+          { bidder: '마트왕', amount: 7500, bidAt: new Date(now - 3600000).toISOString() }
         ],
         settled: false, winner: null, winPrice: null
       }
