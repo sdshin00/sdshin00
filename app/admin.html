@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>떠리몰 관리자</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <!-- 사이드바 -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="brand-icon admin-icon">
+          <span class="material-icons-round">admin_panel_settings</span>
+        </div>
+        <div>
+          <h1 class="brand-name">떠리몰</h1>
+          <p class="brand-sub">관리자 패널</p>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-view="admin-dashboard">
+        <span class="material-icons-round">monitoring</span>
+        <span>통계 대시보드</span>
+      </button>
+      <button class="nav-item" data-view="admin-auctions">
+        <span class="material-icons-round">gavel</span>
+        <span>경매 관리</span>
+      </button>
+      <button class="nav-item" data-view="admin-suppliers">
+        <span class="material-icons-round">store</span>
+        <span>거래처 관리</span>
+      </button>
+      <button class="nav-item" data-view="admin-transactions">
+        <span class="material-icons-round">receipt_long</span>
+        <span>거래 분석</span>
+      </button>
+      <button class="nav-item" data-view="admin-settings">
+        <span class="material-icons-round">settings</span>
+        <span>시스템 설정</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="index.html" class="nav-item">
+        <span class="material-icons-round">storefront</span>
+        <span>사용자 페이지</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- 모바일 헤더 -->
+  <header class="mobile-header" id="mobile-header">
+    <button class="menu-toggle" id="menu-toggle">
+      <span class="material-icons-round">menu</span>
+    </button>
+    <div class="brand-inline">
+      <span class="material-icons-round">admin_panel_settings</span>
+      <span class="brand-name-sm">관리자</span>
+    </div>
+  </header>
+  <div class="overlay hidden" id="overlay"></div>
+
+  <!-- 메인 -->
+  <main class="main-content">
+
+    <!-- 통계 대시보드 -->
+    <section id="admin-dashboard" class="view active">
+      <div class="view-header">
+        <div>
+          <h2>통계 대시보드</h2>
+          <p class="view-desc">전체 플랫폼 현황을 모니터링합니다</p>
+        </div>
+      </div>
+
+      <div class="stats-grid stats-grid-5">
+        <div class="stat-card">
+          <div class="stat-icon bg-blue"><span class="material-icons-round">inventory_2</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="ds-total-auctions">0</span>
+            <span class="stat-label">전체 경매</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-green"><span class="material-icons-round">timer</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="ds-active-auctions">0</span>
+            <span class="stat-label">진행중</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-purple"><span class="material-icons-round">emoji_events</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="ds-won-auctions">0</span>
+            <span class="stat-label">낙찰</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-red"><span class="material-icons-round">cancel</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="ds-failed-auctions">0</span>
+            <span class="stat-label">유찰</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-orange"><span class="material-icons-round">payments</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="ds-total-amount">0원</span>
+            <span class="stat-label">총 거래액</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 차트 영역 -->
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h4 class="chart-title"><span class="material-icons-round">pie_chart</span> 카테고리별 경매 현황</h4>
+          <div id="category-chart" class="bar-chart-area"></div>
+        </div>
+        <div class="chart-card">
+          <h4 class="chart-title"><span class="material-icons-round">trending_up</span> 할인율 분포</h4>
+          <div id="discount-chart" class="bar-chart-area"></div>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-top:1rem">
+        <h4 class="chart-title"><span class="material-icons-round">leaderboard</span> 입찰자 순위 (TOP 10)</h4>
+        <div class="table-card" style="box-shadow:none;border:none">
+          <table>
+            <thead>
+              <tr>
+                <th>순위</th>
+                <th>입찰자</th>
+                <th class="text-right">입찰 횟수</th>
+                <th class="text-right">낙찰 횟수</th>
+                <th class="text-right">총 낙찰액</th>
+              </tr>
+            </thead>
+            <tbody id="bidder-ranking"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 경매 관리 -->
+    <section id="admin-auctions" class="view">
+      <div class="view-header">
+        <div>
+          <h2>경매 관리</h2>
+          <p class="view-desc">등록된 경매를 관리합니다</p>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="material-icons-round filter-icon">filter_list</span>
+          <select id="admin-filter-status">
+            <option value="all">전체 상태</option>
+            <option value="active">진행중</option>
+            <option value="won">낙찰</option>
+            <option value="failed">유찰</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="material-icons-round filter-icon">category</span>
+          <select id="admin-filter-category">
+            <option value="all">전체 카테고리</option>
+            <option value="식품">식품</option>
+            <option value="의류">의류</option>
+            <option value="가전">가전</option>
+            <option value="생활용품">생활용품</option>
+            <option value="화장품">화장품</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="material-icons-round filter-icon">search</span>
+          <input type="text" id="admin-search" placeholder="상품명 / 거래처 검색" class="filter-input">
+        </div>
+        <div class="filter-result" id="admin-auction-count"></div>
+      </div>
+
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>상태</th>
+              <th>상품명</th>
+              <th>거래처</th>
+              <th>카테고리</th>
+              <th class="text-right">수량</th>
+              <th class="text-right">정상가</th>
+              <th class="text-right">최소희망가</th>
+              <th class="text-right">현재 최고가</th>
+              <th class="text-right">입찰수</th>
+              <th>종료일시</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="admin-auction-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 거래처 관리 -->
+    <section id="admin-suppliers" class="view">
+      <div class="view-header">
+        <div>
+          <h2>거래처 관리</h2>
+          <p class="view-desc">거래처별 등록 현황과 거래 실적을 확인합니다</p>
+        </div>
+      </div>
+      <div class="card-grid">
+        <div id="supplier-list"></div>
+      </div>
+    </section>
+
+    <!-- 거래 분석 -->
+    <section id="admin-transactions" class="view">
+      <div class="view-header">
+        <div>
+          <h2>거래 분석</h2>
+          <p class="view-desc">낙찰 거래의 상세 분석 데이터입니다</p>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon bg-blue"><span class="material-icons-round">show_chart</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="tx-avg-discount">0%</span>
+            <span class="stat-label">평균 할인율</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-green"><span class="material-icons-round">savings</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="tx-total-saved">0원</span>
+            <span class="stat-label">총 절감액</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-purple"><span class="material-icons-round">shopping_cart</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="tx-avg-amount">0원</span>
+            <span class="stat-label">평균 낙찰가</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-orange"><span class="material-icons-round">percent</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="tx-success-rate">0%</span>
+            <span class="stat-label">낙찰률</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-top:1rem">
+        <h4 class="chart-title"><span class="material-icons-round">category</span> 카테고리별 거래 분석</h4>
+        <div class="table-card" style="box-shadow:none;border:none">
+          <table>
+            <thead>
+              <tr>
+                <th>카테고리</th>
+                <th class="text-right">거래 건수</th>
+                <th class="text-right">총 거래액</th>
+                <th class="text-right">평균 할인율</th>
+                <th class="text-right">총 수량</th>
+              </tr>
+            </thead>
+            <tbody id="tx-category-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-top:1rem">
+        <h4 class="chart-title"><span class="material-icons-round">list_alt</span> 전체 거래 내역</h4>
+        <div class="table-card" style="box-shadow:none;border:none">
+          <table>
+            <thead>
+              <tr>
+                <th>거래일시</th>
+                <th>상품명</th>
+                <th>거래처</th>
+                <th>낙찰자</th>
+                <th class="text-right">수량</th>
+                <th class="text-right">정상가</th>
+                <th class="text-right">낙찰가</th>
+                <th class="text-right">할인율</th>
+                <th class="text-right">거래액</th>
+              </tr>
+            </thead>
+            <tbody id="tx-detail-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 시스템 설정 -->
+    <section id="admin-settings" class="view">
+      <div class="view-header">
+        <div>
+          <h2>시스템 설정</h2>
+          <p class="view-desc">플랫폼 운영 설정을 관리합니다</p>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <div class="settings-card">
+          <h4 class="settings-title"><span class="material-icons-round">gavel</span> 경매 기본 설정</h4>
+          <div class="form-group">
+            <label>기본 경매 기간</label>
+            <select id="setting-default-duration">
+              <option value="1">1시간</option>
+              <option value="6">6시간</option>
+              <option value="24" selected>24시간</option>
+              <option value="72">3일</option>
+              <option value="168">7일</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>최소 입찰 증가 단위 (원)</label>
+            <input type="number" id="setting-min-increment" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label>최대 경매 기간 (시간)</label>
+            <input type="number" id="setting-max-duration" value="168" min="1">
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h4 class="settings-title"><span class="material-icons-round">notifications</span> 알림 설정</h4>
+          <div class="toggle-group">
+            <label class="toggle-label">
+              <span>경매 등록 알림</span>
+              <input type="checkbox" id="setting-notify-register" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+          <div class="toggle-group">
+            <label class="toggle-label">
+              <span>입찰 알림</span>
+              <input type="checkbox" id="setting-notify-bid" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+          <div class="toggle-group">
+            <label class="toggle-label">
+              <span>낙찰 알림</span>
+              <input type="checkbox" id="setting-notify-won" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+          <div class="toggle-group">
+            <label class="toggle-label">
+              <span>유찰 알림</span>
+              <input type="checkbox" id="setting-notify-failed" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h4 class="settings-title"><span class="material-icons-round">database</span> 데이터 관리</h4>
+          <p class="settings-desc">저장된 데이터를 관리합니다. 초기화 시 모든 데이터가 삭제되며 복구할 수 없습니다.</p>
+          <div class="settings-actions">
+            <button class="btn btn-ghost" id="export-data">
+              <span class="material-icons-round">download</span> 데이터 내보내기
+            </button>
+            <button class="btn btn-ghost" id="import-data-btn">
+              <span class="material-icons-round">upload</span> 데이터 가져오기
+            </button>
+            <input type="file" id="import-data" accept=".json" style="display:none">
+            <button class="btn btn-danger" id="reset-all-data">
+              <span class="material-icons-round">delete_forever</span> 전체 초기화
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 경매 관리 모달 -->
+  <div id="auction-action-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><span class="material-icons-round">edit</span> <span id="modal-action-title">경매 관리</span></h3>
+        <button class="modal-close" id="action-modal-close"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body" id="action-modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="action-modal-cancel">취소</button>
+        <button class="btn btn-primary" id="action-modal-confirm">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>

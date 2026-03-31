@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>떠리몰 - 체화재고 경매 플랫폼</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 사이드바 -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <span class="material-icons-round">storefront</span>
+        </div>
+        <div>
+          <h1 class="brand-name">떠리몰</h1>
+          <p class="brand-sub">체화재고 경매 플랫폼</p>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-view="dashboard">
+        <span class="material-icons-round">dashboard</span>
+        <span>대시보드</span>
+      </button>
+      <button class="nav-item" data-view="register">
+        <span class="material-icons-round">add_box</span>
+        <span>재고 등록</span>
+      </button>
+      <button class="nav-item" data-view="auctions">
+        <span class="material-icons-round">gavel</span>
+        <span>경매장</span>
+      </button>
+      <button class="nav-item" data-view="transactions">
+        <span class="material-icons-round">receipt_long</span>
+        <span>거래 내역</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="admin.html" class="nav-item">
+        <span class="material-icons-round">admin_panel_settings</span>
+        <span>관리자 페이지</span>
+      </a>
+      <button id="reset-data" class="nav-item nav-item-danger">
+        <span class="material-icons-round">restart_alt</span>
+        <span>데이터 초기화</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- 모바일 헤더 -->
+  <header class="mobile-header" id="mobile-header">
+    <button class="menu-toggle" id="menu-toggle">
+      <span class="material-icons-round">menu</span>
+    </button>
+    <div class="brand-inline">
+      <span class="material-icons-round">storefront</span>
+      <span class="brand-name-sm">떠리몰</span>
+    </div>
+  </header>
+  <div class="overlay hidden" id="overlay"></div>
+
+  <!-- 메인 콘텐츠 -->
+  <main class="main-content">
+
+    <!-- 대시보드 -->
+    <section id="dashboard" class="view active">
+      <div class="view-header">
+        <div>
+          <h2>대시보드</h2>
+          <p class="view-desc">체화재고 경매 현황을 한눈에 확인하세요</p>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon bg-blue"><span class="material-icons-round">inventory_2</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-inventory">0</span>
+            <span class="stat-label">등록 재고</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-green"><span class="material-icons-round">timer</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-active">0</span>
+            <span class="stat-label">진행중 경매</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-purple"><span class="material-icons-round">handshake</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-completed">0</span>
+            <span class="stat-label">완료 거래</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-orange"><span class="material-icons-round">payments</span></div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-total">0원</span>
+            <span class="stat-label">총 거래액</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <h3>최근 경매</h3>
+        <button class="link-btn" data-goto="auctions">전체보기 <span class="material-icons-round" style="font-size:16px">arrow_forward</span></button>
+      </div>
+      <div id="recent-auctions" class="card-grid"></div>
+    </section>
+
+    <!-- 재고 등록 -->
+    <section id="register" class="view">
+      <div class="view-header">
+        <div>
+          <h2>체화재고 등록</h2>
+          <p class="view-desc">거래처의 체화재고를 등록하고 경매를 시작하세요</p>
+        </div>
+      </div>
+      <form id="register-form" class="form-card">
+        <div class="form-section">
+          <h4 class="form-section-title"><span class="material-icons-round">business</span> 거래처 정보</h4>
+          <div class="form-group">
+            <label for="supplier-name">거래처명 <span class="required">*</span></label>
+            <input type="text" id="supplier-name" required placeholder="예: 한국식품">
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4 class="form-section-title"><span class="material-icons-round">category</span> 상품 정보</h4>
+          <div class="form-group">
+            <label for="product-name">상품명 <span class="required">*</span></label>
+            <input type="text" id="product-name" required placeholder="예: 프리미엄 견과류 선물세트">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="category">카테고리 <span class="required">*</span></label>
+              <select id="category" required>
+                <option value="">선택하세요</option>
+                <option value="식품">식품</option>
+                <option value="의류">의류</option>
+                <option value="가전">가전</option>
+                <option value="생활용품">생활용품</option>
+                <option value="화장품">화장품</option>
+                <option value="기타">기타</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="quantity">수량 <span class="required">*</span></label>
+              <input type="number" id="quantity" required min="1" placeholder="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="description">상품 설명</label>
+            <textarea id="description" rows="3" placeholder="재고 상태, 유통기한 등 상세 정보를 입력하세요"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="reason">체화 사유</label>
+            <select id="reason">
+              <option value="">선택하세요</option>
+              <option value="유통기한임박">유통기한 임박</option>
+              <option value="시즌종료">시즌 종료</option>
+              <option value="과잉생산">과잉 생산</option>
+              <option value="반품">반품</option>
+              <option value="리뉴얼">리뉴얼 (구버전)</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4 class="form-section-title"><span class="material-icons-round">sell</span> 가격 및 경매 설정</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="original-price">정상가 (원) <span class="required">*</span></label>
+              <div class="input-with-unit">
+                <input type="number" id="original-price" required min="0" placeholder="0">
+                <span class="unit">원</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="min-price">최소 희망가 (원) <span class="required">*</span></label>
+              <div class="input-with-unit">
+                <input type="number" id="min-price" required min="0" placeholder="0">
+                <span class="unit">원</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="auction-duration">경매 기간</label>
+            <select id="auction-duration" required>
+              <option value="1">1시간</option>
+              <option value="6">6시간</option>
+              <option value="24" selected>24시간</option>
+              <option value="72">3일</option>
+              <option value="168">7일</option>
+            </select>
+          </div>
+          <div id="price-preview" class="price-preview hidden">
+            <span class="material-icons-round">info</span>
+            <span>정상가 대비 <strong id="preview-rate">0%</strong> 할인된 가격으로 시작합니다</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">
+          <span class="material-icons-round">gavel</span> 경매 등록하기
+        </button>
+      </form>
+    </section>
+
+    <!-- 경매장 -->
+    <section id="auctions" class="view">
+      <div class="view-header">
+        <div>
+          <h2>경매장</h2>
+          <p class="view-desc">진행 중인 경매에 참여하세요</p>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="material-icons-round filter-icon">filter_list</span>
+          <select id="filter-category">
+            <option value="all">전체 카테고리</option>
+            <option value="식품">식품</option>
+            <option value="의류">의류</option>
+            <option value="가전">가전</option>
+            <option value="생활용품">생활용품</option>
+            <option value="화장품">화장품</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="material-icons-round filter-icon">tune</span>
+          <select id="filter-status">
+            <option value="active">진행중</option>
+            <option value="ended">종료</option>
+            <option value="all">전체</option>
+          </select>
+        </div>
+        <div class="filter-result" id="filter-result"></div>
+      </div>
+      <div id="auction-list" class="card-grid"></div>
+    </section>
+
+    <!-- 거래 내역 -->
+    <section id="transactions" class="view">
+      <div class="view-header">
+        <div>
+          <h2>거래 내역</h2>
+          <p class="view-desc">낙찰 완료된 거래 목록입니다</p>
+        </div>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>거래일시</th>
+              <th>상품명</th>
+              <th>거래처</th>
+              <th class="text-right">수량</th>
+              <th class="text-right">정상가</th>
+              <th class="text-right">낙찰가</th>
+              <th class="text-right">할인율</th>
+              <th>낙찰자</th>
+            </tr>
+          </thead>
+          <tbody id="transaction-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- 입찰 모달 -->
+  <div id="bid-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><span class="material-icons-round">gavel</span> 입찰하기</h3>
+        <button class="modal-close"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div id="bid-item-info" class="bid-info-card"></div>
+        <div class="form-group">
+          <label for="bid-amount">입찰가 <span class="required">*</span></label>
+          <div class="input-with-unit">
+            <input type="number" id="bid-amount" min="0" placeholder="입찰 금액을 입력하세요">
+            <span class="unit">원</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="bidder-name">입찰자명 <span class="required">*</span></label>
+          <input type="text" id="bidder-name" placeholder="입찰자명을 입력하세요">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancel-bid">취소</button>
+        <button id="submit-bid" class="btn btn-primary">
+          <span class="material-icons-round">gavel</span> 입찰하기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 알림 -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
